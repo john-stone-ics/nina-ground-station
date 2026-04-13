@@ -21,6 +21,7 @@ namespace DaleGhent.NINA.GroundStation.Utilities {
     internal class BackgroundQueueWorker<T> : IDisposable {
         private CancellationTokenSource workerCts;
         private AsyncProducerConsumerQueue<T> messageQueue;
+        private Task workerTask;
         private readonly Func<T, CancellationToken, Task> workerFn;
 
         public BackgroundQueueWorker(Func<T, CancellationToken, Task> workerFn) {
@@ -28,35 +29,59 @@ namespace DaleGhent.NINA.GroundStation.Utilities {
         }
 
         public async Task Enqueue(T item) {
-            var localCopy = messageQueue;
+            var localCopy = Volatile.Read(ref messageQueue);
             if (localCopy == null) { return; }
-            await localCopy.EnqueueAsync(item);
+
+            try {
+                await localCopy.EnqueueAsync(item);
+            } catch (InvalidOperationException) {
+                // Queue was completed between the null check and EnqueueAsync
+            }
         }
 
         public async Task Stop() {
+            // Atomically capture and clear all state so a concurrent Start() won't conflict
+            var localQueue = Interlocked.Exchange(ref messageQueue, null);
+            var localCts = Interlocked.Exchange(ref workerCts, null);
+            var localTask = Interlocked.Exchange(ref workerTask, null);
+
             try {
-                // use a local copy of the current message queue to prevent case where Start() could be run prior to the delays passing and setting a fresh queue
-                var localCopy = messageQueue;
                 // Wait a little for any last items to be enqueued, such as at the very end of a sequence
                 await Task.Delay(TimeSpan.FromSeconds(5));
 
                 Logger.Trace("Complete adding to queue");
-                localCopy?.CompleteAdding();
+                localQueue?.CompleteAdding();
+
+                // Allow the worker to drain remaining items before cancelling
+                if (localTask != null) {
+                    await Task.WhenAny(localTask, Task.Delay(TimeSpan.FromSeconds(10)));
+                }
             } catch (Exception) {
             } finally {
                 try {
-                    workerCts?.Cancel();
-                    workerCts?.Dispose();
+                    localCts?.Cancel();
+                    localCts?.Dispose();
                 } catch {
                 }
             }
         }
 
         public void Start() {
-            workerCts = new CancellationTokenSource();
-            messageQueue = new AsyncProducerConsumerQueue<T>(1000);
+            var newCts = new CancellationTokenSource();
+            var newQueue = new AsyncProducerConsumerQueue<T>(1000);
+
+            // Atomically swap in the new state, capturing any prior state for cleanup
+            var oldCts = Interlocked.Exchange(ref workerCts, newCts);
+            var oldQueue = Interlocked.Exchange(ref messageQueue, newQueue);
+
+            try { oldQueue?.CompleteAdding(); } catch { }
+            try {
+                oldCts?.Cancel();
+                oldCts?.Dispose();
+            } catch { }
+
             // Start the work in background. The inside method uses local copies of the class fields to prevent race conditions
-            _ = DoWork(messageQueue, workerCts.Token);
+            workerTask = DoWork(newQueue, newCts.Token);
         }
 
         private async Task DoWork(AsyncProducerConsumerQueue<T> queue, CancellationToken token) {
@@ -80,6 +105,14 @@ namespace DaleGhent.NINA.GroundStation.Utilities {
         }
 
         public void Dispose() {
+            try {
+                var cts = Interlocked.Exchange(ref workerCts, null);
+                Interlocked.Exchange(ref messageQueue, null)?.CompleteAdding();
+                Interlocked.Exchange(ref workerTask, null);
+                cts?.Cancel();
+                cts?.Dispose();
+            } catch { }
+
             GC.SuppressFinalize(this);
         }
     }

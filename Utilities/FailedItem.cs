@@ -25,7 +25,7 @@ namespace DaleGhent.NINA.GroundStation.Utilities {
         public string Category { get; set; } = string.Empty;
         public string ParentName { get; set; } = string.Empty;
         public int Attempts { get; set; } = 0;
-        public List<FailureReason> Reasons { get; set; } = new List<FailureReason>();
+        public List<FailureReason> Reasons { get; set; } = [];
 
         public static FailedItem FromEntity(ISequenceEntity entity, Exception failureReason) {
             var failedItem = new FailedItem {
