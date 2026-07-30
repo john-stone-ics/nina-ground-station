@@ -1,5 +1,9 @@
 ﻿# Ground Station
 
+## 3.1.0.117 - 2026-07-30
+* Addressed rare case where a semaphore race would prevent a failure message from being sent
+* Added the abilitt to set the MQTT retention flag for both regular and failure/LW&T messages
+
 ## 3.0.0.117 - 2025-11-12
 * Minimum supported NINA version is now 3.2.
 * **Major change**: Plugin configuration is now per-profile instead of being single global settings that apply to all profiles. This permits you to have profile-specific settings. Your former global settings will now act as the _default_ settings for Ground Station when a new profile is created. Your pre-3.0 settings will be migrated into each profile whenever that profile is loaded.
