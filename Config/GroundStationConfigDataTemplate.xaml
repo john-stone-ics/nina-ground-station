@@ -1238,25 +1238,6 @@
                         </TextBox>
                     </StackPanel>
 
-                    <StackPanel Margin="0,10,0,5" Orientation="Horizontal">
-                        <TextBlock
-                            Width="110"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Center">
-                            <TextBlock.Text>Default topic</TextBlock.Text>
-                            <TextBlock.ToolTip>The default topic to publish to</TextBlock.ToolTip>
-                        </TextBlock>
-                        <TextBox
-                            Width="400"
-                            Margin="5,0,0,0"
-                            VerticalAlignment="Center"
-                            VerticalContentAlignment="Center">
-                            <TextBox.Text>
-                                <Binding Path="MqttDefaultTopic" />
-                            </TextBox.Text>
-                        </TextBox>
-                    </StackPanel>
-
                     <StackPanel Margin="0,0,0,5" Orientation="Horizontal">
                         <TextBlock
                             Width="110"
@@ -1275,6 +1256,25 @@
                             VerticalContentAlignment="Center">
                             <TextBox.Text>
                                 <Binding Path="MqttClientId" />
+                            </TextBox.Text>
+                        </TextBox>
+                    </StackPanel>
+
+                    <StackPanel Margin="0,10,0,5" Orientation="Horizontal">
+                        <TextBlock
+                            Width="110"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                            <TextBlock.Text>Default topic</TextBlock.Text>
+                            <TextBlock.ToolTip>The default topic to publish to</TextBlock.ToolTip>
+                        </TextBlock>
+                        <TextBox
+                            Width="400"
+                            Margin="5,0,0,0"
+                            VerticalAlignment="Center"
+                            VerticalContentAlignment="Center">
+                            <TextBox.Text>
+                                <Binding Path="MqttDefaultTopic" />
                             </TextBox.Text>
                         </TextBox>
                     </StackPanel>
@@ -1309,6 +1309,34 @@
                             VerticalAlignment="Center"
                             ItemsSource="{Binding MqttQoSLevels}"
                             SelectedIndex="{Binding MqttDefaultFailureQoSLevel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+
+                    <StackPanel Margin="0,0,0,5" Orientation="Horizontal">
+                        <TextBlock
+                            Width="110"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                            <TextBlock.Text>Default retain</TextBlock.Text>
+                            <TextBlock.ToolTip>The retention flag for regular MQTT messages</TextBlock.ToolTip>
+                        </TextBlock>
+                        <CheckBox
+                            Margin="5,0,0,0"
+                            VerticalAlignment="Center"
+                            IsChecked="{Binding MqttDefaultRetain, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    </StackPanel>
+
+                    <StackPanel Margin="0,0,0,5" Orientation="Horizontal">
+                        <TextBlock
+                            Width="110"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                            <TextBlock.Text>Default failure retain</TextBlock.Text>
+                            <TextBlock.ToolTip>The retention flag for all failure and Last Will MQTT messages</TextBlock.ToolTip>
+                        </TextBlock>
+                        <CheckBox
+                            Margin="5,0,0,0"
+                            VerticalAlignment="Center"
+                            IsChecked="{Binding MqttDefaultFailureRetain, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
 
                     <StackPanel Margin="0,10,0,5" Orientation="Horizontal">

@@ -344,6 +344,14 @@ namespace DaleGhent.NINA.GroundStation.Config {
             }
         }
 
+        public bool MqttDefaultFailureRetain {
+            get => pluginOptionsAccessor.GetValueBoolean(nameof(MqttDefaultFailureRetain), true);
+            set {
+                pluginOptionsAccessor.SetValueBoolean(nameof(MqttDefaultFailureRetain), value);
+                RaisePropertyChanged();
+            }
+        }
+
         public string MqttDefaultTopic {
             get => pluginOptionsAccessor.GetValueString(nameof(MqttDefaultTopic), Settings.Default.MqttDefaultTopic);
             set {

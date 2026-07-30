@@ -32,6 +32,7 @@ namespace DaleGhent.NINA.GroundStation.Mqtt {
                 LastWillTopic = groundStationOptions.MqttLwtTopic,
                 LastWillPayload = Utilities.Utilities.ResolveTokens(groundStationOptions.MqttLwtLastWillPayload),
                 Qos = groundStationOptions.MqttDefaultFailureQoSLevel,
+                Retain = groundStationOptions.MqttDefaultFailureRetain,
             };
         }
 

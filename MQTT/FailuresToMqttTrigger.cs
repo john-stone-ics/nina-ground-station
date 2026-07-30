@@ -49,6 +49,7 @@ namespace DaleGhent.NINA.GroundStation.FailuresToMqttTrigger {
             queueWorker = new BackgroundQueueWorker<SequenceEntityFailureEventArgs>(WorkerFn);
             Topic = GroundStation.GroundStationConfig.MqttDefaultTopic;
             QoS = GroundStation.GroundStationConfig.MqttDefaultFailureQoSLevel;
+            Retain = GroundStation.GroundStationConfig.MqttDefaultFailureRetain;
         }
 
         public FailuresToMqttTrigger(FailuresToMqttTrigger copyMe) : this() {
