@@ -2,7 +2,7 @@
 
 ## 3.1.0.117 - 2026-07-30
 * Addressed rare case where a semaphore race would prevent a failure message from being sent
-* Added the abilitt to set the MQTT retention flag for both regular and failure/LW&T messages
+* Added the ability to set the MQTT retention flag for both regular and failure/LW&T messages
 
 ## 3.0.0.117 - 2025-11-12
 * Minimum supported NINA version is now 3.2.
