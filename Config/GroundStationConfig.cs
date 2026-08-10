@@ -564,6 +564,9 @@ namespace DaleGhent.NINA.GroundStation.Config {
             }
         }
 
+        private CancellationTokenSource playSoundTestCts;
+        private CancellationTokenSource playFailureSoundTestCts;
+
         //
         // Discord Webhook options
         //
@@ -1136,39 +1139,63 @@ namespace DaleGhent.NINA.GroundStation.Config {
 
 
         [RelayCommand]
-        private static async Task<bool> PlaySoundTest(object arg) {
+        private async Task<bool> PlaySoundTest(object arg) {
             var audioFile = GroundStation.GroundStationConfig.PlaySoundDefaultFile;
+
+            using var cts = new CancellationTokenSource();
+            playSoundTestCts = cts;
 
             try {
                 var playSoundCommon = new PlaySoundCommon() {
                     SoundFile = audioFile
                 };
 
-                await playSoundCommon.PlaySound(CancellationToken.None);
+                await playSoundCommon.PlaySound(cts.Token);
+            } catch (OperationCanceledException) {
+                return false;
             } catch (Exception ex) {
                 Notification.ShowExternalError($"{ex.Message}", "Playback Error");
                 return false;
+            } finally {
+                playSoundTestCts = null;
             }
 
             return true;
         }
 
         [RelayCommand]
-        private static async Task<bool> PlayFailureSoundTest(object arg) {
+        private void StopSoundTest(object arg) {
+            playSoundTestCts?.Cancel();
+        }
+
+        [RelayCommand]
+        private async Task<bool> PlayFailureSoundTest(object arg) {
             var audioFile = GroundStation.GroundStationConfig.PlaySoundDefaultFailureFile;
+
+            using var cts = new CancellationTokenSource();
+            playFailureSoundTestCts = cts;
 
             try {
                 var playSoundCommon = new PlaySoundCommon() {
                     SoundFile = audioFile
                 };
 
-                await playSoundCommon.PlaySound(CancellationToken.None);
+                await playSoundCommon.PlaySound(cts.Token);
+            } catch (OperationCanceledException) {
+                return false;
             } catch (Exception ex) {
                 Notification.ShowExternalError($"{ex.Message}", "Playback Error");
                 return false;
+            } finally {
+                playFailureSoundTestCts = null;
             }
 
             return true;
+        }
+
+        [RelayCommand]
+        private void StopFailureSoundTest(object arg) {
+            playFailureSoundTestCts?.Cancel();
         }
 
         [RelayCommand]

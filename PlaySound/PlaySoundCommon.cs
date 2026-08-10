@@ -10,8 +10,9 @@
 
 #endregion "copyright"
 
-using NetCoreAudio;
+using NAudio.Wave;
 using System;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -19,12 +20,13 @@ using System.Threading.Tasks;
 namespace DaleGhent.NINA.GroundStation.PlaySound {
 
     public class PlaySoundCommon {
-        public static string FileTypeFilter { get; } = "Audio files|*.wav;*.aiff;*.aif;*.mp3|All files|*.*";
+        public static string FileTypeFilter { get; } = "Audio files|*.wav;*.aiff;*.aif;*.mp3;*.mp4;*.wma;*.ogg;*.flac|All files|*.*";
 
         public string SoundFile { get; set; } = string.Empty;
 
         public bool WaitUntilFinished { get; set; } = true;
 
+        [SuppressMessage("Interoperability", "CA1416:Validate platform compatibility", Justification = "Windows-only NINA plugin for now")]
         public async Task<bool> PlaySound(CancellationToken ct) {
             if (string.IsNullOrEmpty(SoundFile)) {
                 throw new ArgumentException("Audio file not specified");
@@ -34,16 +36,20 @@ namespace DaleGhent.NINA.GroundStation.PlaySound {
                 throw new FileNotFoundException($"{SoundFile} not found");
             }
 
-            var player = new Player();
+            using var audioFile = new AudioFileReader(SoundFile);
+            using var player = new WaveOutEvent();
+            player.Init(audioFile);
+            player.Play();
 
             if (WaitUntilFinished) {
-                await player.Play(SoundFile);
-
-                do {
-                    await Task.Delay(250, ct);
-                } while (player.Playing);
-            } else {
-                await player.Play(SoundFile);
+                try {
+                    do {
+                        await Task.Delay(250, ct);
+                    } while (player.PlaybackState == PlaybackState.Playing);
+                } catch (OperationCanceledException) {
+                    player.Stop();
+                    return false;
+                }
             }
 
             return true;
