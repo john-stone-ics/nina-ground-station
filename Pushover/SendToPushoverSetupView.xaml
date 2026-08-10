@@ -18,7 +18,7 @@
     d:DataContext="{d:DesignInstance Type=local:SendToPushover}"
     mc:Ignorable="d">
 
-    <StackPanel Orientation="Vertical" MinWidth="600">
+    <StackPanel MinWidth="600" Orientation="Vertical">
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" />
@@ -27,7 +27,7 @@
 
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*"  />
+                <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
 
             <Label
@@ -41,8 +41,8 @@
                 Grid.Row="0"
                 Grid.Column="1"
                 Margin="10,10,10,2"
-                Text="{Binding Title, UpdateSourceTrigger=LostFocus}"
-                HorizontalScrollBarVisibility="Auto" />
+                HorizontalScrollBarVisibility="Auto"
+                Text="{Binding Title, UpdateSourceTrigger=LostFocus}" />
 
             <Label
                 Grid.Row="1"
@@ -60,9 +60,9 @@
                 VerticalAlignment="Top"
                 AcceptsReturn="True"
                 AcceptsTab="True"
+                HorizontalScrollBarVisibility="Auto"
                 Text="{Binding Message, UpdateSourceTrigger=LostFocus}"
                 TextWrapping="Wrap"
-                HorizontalScrollBarVisibility="Auto"
                 VerticalScrollBarVisibility="Auto" />
         </Grid>
 
@@ -75,7 +75,7 @@
 
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*"  />
+                    <ColumnDefinition Width="*" />
                 </Grid.ColumnDefinitions>
 
                 <Label
