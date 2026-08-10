@@ -20,7 +20,13 @@ using System.Threading.Tasks;
 namespace DaleGhent.NINA.GroundStation.PlaySound {
 
     public class PlaySoundCommon {
-        public static string FileTypeFilter { get; } = "Audio files|*.wav;*.aiff;*.aif;*.mp3;*.mp4;*.wma;*.ogg;*.flac|All files|*.*";
+        private AudioFileReader audioFile;
+        private WaveOutEvent player;
+
+        public PlaySoundCommon() {
+        }
+
+        public static string FileTypeFilter { get; } = "Audio files|*.wav;*.aiff;*.aif;*.mp3;*.mp4;*.m4a;*.m4v;*.aac;*.wma;*.ogg;*.flac|All files|*.*";
 
         public string SoundFile { get; set; } = string.Empty;
 
@@ -36,16 +42,20 @@ namespace DaleGhent.NINA.GroundStation.PlaySound {
                 throw new FileNotFoundException($"{SoundFile} not found");
             }
 
-            using var audioFile = new AudioFileReader(SoundFile);
-            using var player = new WaveOutEvent();
+            audioFile = new AudioFileReader(SoundFile);
+            player = new WaveOutEvent();
             player.Init(audioFile);
+            player.PlaybackStopped += OnPlaybackStopped;
             player.Play();
 
             if (WaitUntilFinished) {
                 try {
                     do {
                         await Task.Delay(250, ct);
-                    } while (player.PlaybackState == PlaybackState.Playing);
+                    } while (player != null && player.PlaybackState == PlaybackState.Playing);
+                } catch (TaskCanceledException) {
+                    player.Stop();
+                    return false;
                 } catch (OperationCanceledException) {
                     player.Stop();
                     return false;
@@ -53,6 +63,13 @@ namespace DaleGhent.NINA.GroundStation.PlaySound {
             }
 
             return true;
+        }
+
+        private void OnPlaybackStopped(object sender, StoppedEventArgs args) {
+            player.Dispose();
+            player = null;
+            audioFile.Dispose();
+            audioFile = null;
         }
     }
 }
