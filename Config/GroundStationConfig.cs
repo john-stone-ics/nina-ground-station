@@ -870,7 +870,7 @@ namespace DaleGhent.NINA.GroundStation.Config {
         }
 
         public string NtfyShUser {
-            get => pluginOptionsAccessor.GetValueString(Security.Decrypt(nameof(NtfyShUser)), string.Empty);
+            get => Security.Decrypt(pluginOptionsAccessor.GetValueString(nameof(NtfyShUser), string.Empty));
             set {
                 pluginOptionsAccessor.SetValueString(nameof(NtfyShUser), Security.Encrypt(value.Trim()));
                 RaisePropertyChanged();
@@ -878,7 +878,7 @@ namespace DaleGhent.NINA.GroundStation.Config {
         }
 
         public string NtfyShPassword {
-            get => pluginOptionsAccessor.GetValueString(Security.Decrypt(nameof(NtfyShPassword)), string.Empty);
+            get => Security.Decrypt(pluginOptionsAccessor.GetValueString(nameof(NtfyShPassword), string.Empty));
             set {
                 pluginOptionsAccessor.SetValueString(nameof(NtfyShPassword), Security.Encrypt(value.Trim()));
                 RaisePropertyChanged();
@@ -886,7 +886,7 @@ namespace DaleGhent.NINA.GroundStation.Config {
         }
 
         public string NtfyShToken {
-            get => pluginOptionsAccessor.GetValueString(Security.Decrypt(nameof(NtfyShToken)), string.Empty);
+            get => Security.Decrypt(pluginOptionsAccessor.GetValueString(nameof(NtfyShToken), string.Empty));
             set {
                 pluginOptionsAccessor.SetValueString(nameof(NtfyShToken), Security.Encrypt(value.Trim()));
                 RaisePropertyChanged();
@@ -1042,6 +1042,25 @@ namespace DaleGhent.NINA.GroundStation.Config {
                 Notification.ShowSuccess("Telegram message sent");
                 return true;
             }
+        }
+
+        [RelayCommand]
+        private static async Task<bool> NtfyShTest(object arg) {
+            var send = new NtfySh() {
+                NtfyShTitle = "NINA Ground Station",
+                NtfyShMessage = "Test notification from Ground Station",
+                NtfyShPrioirty = NtfySh.GsNtfyPrio2PriorityLevel(NtfyShPriorityLevels.Default),
+            };
+
+            try {
+                await send.SendNftyShMessage();
+            } catch (Exception ex) {
+                Notification.ShowExternalError($"Failed to send message to ntfy:{Environment.NewLine}{ex.Message}", "ntfy Error");
+                return false;
+            }
+
+            Notification.ShowSuccess("ntfy message sent");
+            return true;
         }
 
         [RelayCommand]
