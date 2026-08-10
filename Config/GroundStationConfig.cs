@@ -1046,10 +1046,10 @@ namespace DaleGhent.NINA.GroundStation.Config {
 
         [RelayCommand]
         private static async Task<bool> NtfyShTest(object arg) {
-            var send = new NtfySh() {
+            var send = new NtfySh.NtfySh() {
                 NtfyShTitle = "NINA Ground Station",
                 NtfyShMessage = "Test notification from Ground Station",
-                NtfyShPrioirty = NtfySh.GsNtfyPrio2PriorityLevel(NtfyShPriorityLevels.Default),
+                NtfyShPrioirty = NtfySh.NtfySh.GsNtfyPrio2PriorityLevel(NtfyShPriorityLevels.Default),
             };
 
             try {
