@@ -28,7 +28,7 @@ namespace DaleGhent.NINA.GroundStation.Utilities {
         internal const string RuntimeErrorMessage = "An unspecified failure occurred while running this item. Refer to NINA's log for details.";
         internal const int cancelTimeout = 10; // in seconds
 
-        internal static string ResolveTokens(string text, ISequenceEntity sequenceItem = null, IMetadata metadata = null, bool urlEncode = false) {
+        internal static string ResolveTokens(string text, ISequenceEntity sequenceItem = null, IMetadata metadata = null, bool urlEncode = false, DateTime? nowOverride = null) {
             IDeepSkyObject target = null;
             CultureInfo culture = CultureInfo.InvariantCulture;
 
@@ -40,8 +40,9 @@ namespace DaleGhent.NINA.GroundStation.Utilities {
                 target = FindDsoInfo(sequenceItem.Parent);
             }
 
-            var datetime = DateTime.Now;
+            var datetime = nowOverride ?? DateTime.Now;
             var datetimeUtc = datetime.ToUniversalTime();
+            var sessionDateTime = SessionDateTime(datetime);
 
             text = !string.IsNullOrEmpty(target?.Name)
                 ? text.Replace(@"$$TARGET_NAME$$", DoUrlEncode(urlEncode, target.Name))
@@ -73,6 +74,8 @@ namespace DaleGhent.NINA.GroundStation.Utilities {
             text = text.Replace(@"$$DATE$$", DoUrlEncode(urlEncode, datetime.ToString("d")));
             text = text.Replace(@"$$TIME$$", DoUrlEncode(urlEncode, datetime.ToString("T")));
             text = text.Replace(@"$$DATETIME$$", DoUrlEncode(urlEncode, datetime.ToString("G")));
+            text = text.Replace(@"$$SESSIONDATE$$", DoUrlEncode(urlEncode, sessionDateTime.ToString("d")));
+            text = text.Replace(@"$$SESSIONDATETIME$$", DoUrlEncode(urlEncode, sessionDateTime.ToString("G")));
 
             text = text.Replace(@"$$DATE_UTC$$", DoUrlEncode(urlEncode, datetimeUtc.ToString("d")));
             text = text.Replace(@"$$TIME_UTC$$", DoUrlEncode(urlEncode, datetimeUtc.ToString("T")));
@@ -80,6 +83,7 @@ namespace DaleGhent.NINA.GroundStation.Utilities {
             text = text.Replace(@"$$UNIX_EPOCH$$", UnixEpoch(datetime).ToString());
 
             text = ParseFormattedDateTime(text, datetime, urlEncode);
+            text = ParseFormattedSessionDateTime(text, sessionDateTime, urlEncode);
 
             text = text.Replace(@"$$SYSTEM_NAME$$", DoUrlEncode(urlEncode, Environment.MachineName));
             text = text.Replace(@"$$USER_NAME$$", DoUrlEncode(urlEncode, Environment.UserName));
@@ -340,6 +344,11 @@ namespace DaleGhent.NINA.GroundStation.Utilities {
             return (long)dateTime.ToUniversalTime().Subtract(DateTime.UnixEpoch).TotalSeconds;
         }
 
+        internal static DateTime SessionDateTime(DateTime dateTime) {
+            var rolloverTime = GroundStation.GroundStationConfig?.SessionRolloverTimeSpan ?? TimeSpan.FromHours(16);
+            return dateTime.TimeOfDay < rolloverTime ? dateTime.AddDays(-1) : dateTime;
+        }
+
         private static string ParseFormattedDateTime(string text, DateTime datetime, bool urlEncode) {
             string pattern = @"\${2}FORMAT_DATETIME(?<isUTC>_UTC)?\s+(?<specifier>.*?)\${2}";
 
@@ -350,6 +359,22 @@ namespace DaleGhent.NINA.GroundStation.Utilities {
                     text = dateTimeMatch.Groups["isUTC"].Success
                         ? dateRegex.Replace(text, DoUrlEncode(urlEncode, datetime.ToUniversalTime().ToString(dateTimeMatch.Groups["specifier"].Value)))
                         : dateRegex.Replace(text, DoUrlEncode(urlEncode, datetime.ToString(dateTimeMatch.Groups["specifier"].Value)));
+                } catch {
+                    text = dateRegex.Replace(text, DoUrlEncode(urlEncode, "[Invalid DateTime format]"));
+                }
+            }
+
+            return text;
+        }
+
+        private static string ParseFormattedSessionDateTime(string text, DateTime datetime, bool urlEncode) {
+            const string pattern = @"\${2}FORMAT_SESSIONDATETIME\s+(?<specifier>.*?)\${2}";
+
+            foreach (Match dateTimeMatch in Regex.Matches(text, pattern).Cast<Match>()) {
+                var dateRegex = new Regex(Regex.Escape(dateTimeMatch.Value));
+
+                try {
+                    text = dateRegex.Replace(text, DoUrlEncode(urlEncode, datetime.ToString(dateTimeMatch.Groups["specifier"].Value)));
                 } catch {
                     text = dateRegex.Replace(text, DoUrlEncode(urlEncode, "[Invalid DateTime format]"));
                 }

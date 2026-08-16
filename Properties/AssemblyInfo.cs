@@ -18,8 +18,8 @@ using System.Runtime.InteropServices;
 
 // [MANDATORY] The assembly versioning
 //Should be incremented for each new release build of a plugin
-[assembly: AssemblyVersion("3.2.0.0")]
-[assembly: AssemblyFileVersion("3.2.0.0")]
+[assembly: AssemblyVersion("3.2.1.0")]
+[assembly: AssemblyFileVersion("3.2.1.0")]
 
 // [MANDATORY] The name of your plugin
 [assembly: AssemblyTitle("Ground Station")]
@@ -74,7 +74,7 @@ The provided instructions and triggers can be broken down in to two general cate
 * Pushover — Simple and reliable desktop and iOS/Android push messaging. Pushover charges a one-time $5 per-device fee to support its service
 * Telegram — Utilize the [Telegram bot API](https://core.telegram.org/bots/api) to send messages a Telegram channel
 * ntfy.sh — A simple, no-frills notification service that can send messages to a variety of platforms
-* Discord — Send messages to Discord channels using a webhook URL
+* Discord — Send messages to Discord channels using a webhook URL. Optionally group each imaging session's messages into a per-session thread (requires a bot token for normal text channels)
 * Slack — Send messages to Slack channels via OAuth2 token authentication
 * Email — Who doesn't love plain old email? Plain SMTP with user auth and SSL/TLS support
 * HTTP - Send a generic HTTP GET or POST request to a URL
