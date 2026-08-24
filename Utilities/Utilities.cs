@@ -344,8 +344,10 @@ namespace DaleGhent.NINA.GroundStation.Utilities {
             return (long)dateTime.ToUniversalTime().Subtract(DateTime.UnixEpoch).TotalSeconds;
         }
 
-        internal static DateTime SessionDateTime(DateTime dateTime) {
-            var rolloverTime = GroundStation.GroundStationConfig?.SessionRolloverTimeSpan ?? TimeSpan.FromHours(16);
+        internal static DateTime SessionDateTime(DateTime dateTime, TimeSpan? rolloverTimeOverride = null) {
+            var rolloverTime = rolloverTimeOverride
+                ?? GroundStation.GroundStationConfig?.SessionRolloverTimeSpan
+                ?? TimeSpan.FromHours(16);
             return dateTime.TimeOfDay < rolloverTime ? dateTime.AddDays(-1) : dateTime;
         }
 

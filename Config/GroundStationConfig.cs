@@ -1039,10 +1039,6 @@ namespace DaleGhent.NINA.GroundStation.Config {
             MqttPassword = SecureStringToString(s);
         }
 
-        public void SetDiscordBotToken(SecureString s) {
-            DiscordBotToken = SecureStringToString(s);
-        }
-
         private static string SecureStringToString(SecureString value) {
             IntPtr valuePtr = IntPtr.Zero;
             try {
@@ -1298,8 +1294,8 @@ namespace DaleGhent.NINA.GroundStation.Config {
 
             async Task<bool> RunCleanup() {
                 try {
-                    var send = new DiscordWebhook.DiscordWebhookCommon();
-                    var deletedThreadCount = await Task.Run(() => send.DeleteOldSessionThreads(minimumAgeDays, progress, vm.CancellationToken));
+                    var cleanup = new DiscordWebhook.DiscordThreadCleanup();
+                    var deletedThreadCount = await Task.Run(() => cleanup.DeleteOldSessionThreads(minimumAgeDays, progress, vm.CancellationToken));
                     vm.Complete(null);
                     Notification.ShowSuccess(deletedThreadCount == 0
                         ? "No Discord session threads were old enough to delete"
