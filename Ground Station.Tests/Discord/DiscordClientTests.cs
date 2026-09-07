@@ -79,6 +79,14 @@ namespace DaleGhent.NINA.GroundStation.Tests.Discord {
             Assert.Equal("missing id", ex.Message);
         }
 
+        [Theory]
+        [InlineData("https://discord.com/api/webhooks/123/token", true, null, "https://discord.com/api/webhooks/123/token?wait=true")]
+        [InlineData("https://discord.com/api/webhooks/123/token?thread_id=old-thread", true, null, "https://discord.com/api/webhooks/123/token?wait=true")]
+        [InlineData("https://discord.com/api/webhooks/123/token?wait=true&thread_id=old-thread", true, "new-thread", "https://discord.com/api/webhooks/123/token?wait=true&thread_id=new-thread")]
+        public void BuildWebhookUrl_ReplacesWaitAndThreadId(string webhookUrl, bool waitForResponse, string threadId, string expected) {
+            Assert.Equal(expected, DiscordClient.BuildWebhookUrl(webhookUrl, waitForResponse, threadId));
+        }
+
         [Fact]
         public void SanitizeDiscordUrl_RedactsWebhookToken() {
             var sanitized = DiscordClient.SanitizeDiscordUrl("https://discord.com/api/webhooks/123/super-secret?wait=true");

@@ -42,6 +42,10 @@ namespace DaleGhent.NINA.GroundStation.DiscordWebhook {
 
         internal static bool SuppressUserNotifications { get; set; }
 
+        private static readonly JsonSerializerSettings JsonSettings = new() {
+            NullValueHandling = NullValueHandling.Ignore,
+        };
+
         internal DiscordClient() : this(SharedHttpClient) {
         }
 
@@ -221,14 +225,14 @@ namespace DaleGhent.NINA.GroundStation.DiscordWebhook {
 
                 if (attachmentBytes != null) {
                     var multipartContent = new MultipartFormDataContent();
-                    multipartContent.Add(new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json"), "payload_json");
+                    multipartContent.Add(new StringContent(SerializeJson(payload), Encoding.UTF8, "application/json"), "payload_json");
 
                     var fileContent = new ByteArrayContent(attachmentBytes);
                     fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
                     multipartContent.Add(fileContent, "files[0]", attachmentFileName);
                     request.Content = multipartContent;
                 } else {
-                    request.Content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
+                    request.Content = new StringContent(SerializeJson(payload), Encoding.UTF8, "application/json");
                 }
 
                 return request;
@@ -256,7 +260,7 @@ namespace DaleGhent.NINA.GroundStation.DiscordWebhook {
             var patchMethod = new HttpMethod("PATCH");
             var (response, responseBody) = await SendRequestWithRateLimitRetry(() => {
                 var request = new HttpRequestMessage(patchMethod, requestUrl);
-                request.Content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
+                request.Content = new StringContent(SerializeJson(payload), Encoding.UTF8, "application/json");
                 return request;
             }, "webhook-edit", patchMethod, requestUrl, "Failed to edit Discord webhook message", notifyOnFailure);
 
@@ -285,8 +289,30 @@ namespace DaleGhent.NINA.GroundStation.DiscordWebhook {
             }
         }
 
-        private static string BuildWebhookUrl(string webhookUrl, bool waitForResponse, string threadId) {
+        internal static string BuildWebhookUrl(string webhookUrl, bool waitForResponse, string threadId) {
+            if (string.IsNullOrWhiteSpace(webhookUrl)) {
+                return webhookUrl;
+            }
+
+            var parts = webhookUrl.Split(['?'], 2);
+            var baseUrl = parts[0];
             var query = new List<string>();
+
+            if (parts.Length > 1) {
+                foreach (var pair in parts[1].Split('&')) {
+                    if (string.IsNullOrEmpty(pair)) {
+                        continue;
+                    }
+
+                    // The stored webhook URL must not pin wait/thread_id; each send owns those.
+                    if (pair.StartsWith("wait=", StringComparison.OrdinalIgnoreCase)
+                        || pair.StartsWith("thread_id=", StringComparison.OrdinalIgnoreCase)) {
+                        continue;
+                    }
+
+                    query.Add(pair);
+                }
+            }
 
             if (waitForResponse) {
                 query.Add("wait=true");
@@ -297,11 +323,14 @@ namespace DaleGhent.NINA.GroundStation.DiscordWebhook {
             }
 
             if (query.Count == 0) {
-                return webhookUrl;
+                return baseUrl;
             }
 
-            var separator = webhookUrl.Contains("?") ? "&" : "?";
-            return $"{webhookUrl}{separator}{string.Join("&", query)}";
+            return $"{baseUrl}?{string.Join("&", query)}";
+        }
+
+        internal static string SerializeJson(object payload) {
+            return JsonConvert.SerializeObject(payload, JsonSettings);
         }
 
         internal async Task<JObject> SendBotRequest(HttpMethod method, string url, object payload = null, bool notifyOnFailure = true) {
@@ -310,7 +339,7 @@ namespace DaleGhent.NINA.GroundStation.DiscordWebhook {
                 request.Headers.Authorization = new AuthenticationHeaderValue("Bot", DiscordSettings.Current.BotToken);
 
                 if (payload != null) {
-                    request.Content = new StringContent(JsonConvert.SerializeObject(payload), Encoding.UTF8, "application/json");
+                    request.Content = new StringContent(SerializeJson(payload), Encoding.UTF8, "application/json");
                 }
 
                 return request;

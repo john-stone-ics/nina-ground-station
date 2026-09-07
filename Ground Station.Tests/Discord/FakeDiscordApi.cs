@@ -32,6 +32,7 @@ namespace DaleGhent.NINA.GroundStation.Tests.Discord {
         public DateTimeOffset CreatedAt { get; set; }
         public string ThreadId { get; set; }
         public string ThreadName { get; set; }
+        public JToken Embeds { get; set; }
     }
 
     internal sealed class FakeDiscordChannel {
@@ -84,7 +85,8 @@ namespace DaleGhent.NINA.GroundStation.Tests.Discord {
             string threadId = null,
             string threadName = null,
             string webhookId = WebhookId,
-            string messageId = null) {
+            string messageId = null,
+            object embeds = null) {
             lock (sync) {
                 var message = new FakeDiscordMessage {
                     Id = messageId ?? $"{ToSnowflake(createdAt)}{Interlocked.Increment(ref nextId)}",
@@ -94,6 +96,7 @@ namespace DaleGhent.NINA.GroundStation.Tests.Discord {
                     CreatedAt = createdAt,
                     ThreadId = threadId,
                     ThreadName = threadName,
+                    Embeds = embeds == null ? null : JToken.FromObject(embeds),
                 };
                 Messages.Add(message);
                 return message;
@@ -304,13 +307,16 @@ namespace DaleGhent.NINA.GroundStation.Tests.Discord {
 
         private HttpResponseMessage PostWebhook(string threadId, string body) {
             var payload = ParsePayload(body);
-            var threadName = payload.Value<string>("thread_name");
+            var threadNameProperty = payload.Property("thread_name");
+            var threadName = threadNameProperty?.Value?.Type == JTokenType.Null
+                ? null
+                : threadNameProperty?.Value?.Value<string>();
             var content = payload.Value<string>("content") ?? string.Empty;
 
             lock (sync) {
                 Channels[ChannelId].Type = ParentChannelType;
 
-                if (!string.IsNullOrWhiteSpace(threadName) && RejectWebhookThreadName) {
+                if (threadNameProperty != null && RejectWebhookThreadName) {
                     return Json(400, new {
                         code = 220003,
                         message = "Webhooks can only create threads in forum channels",
@@ -326,6 +332,16 @@ namespace DaleGhent.NINA.GroundStation.Tests.Discord {
                     var newThreadId = NewId(createdAt);
                     AddThread(newThreadId, threadName);
                     targetChannelId = newThreadId;
+                } else if (threadNameProperty != null && ParentChannelType is 0 or 5) {
+                    // Mirrors Discord's text-channel behavior: a present thread_name field,
+                    // including null, attaches the webhook message to the active thread.
+                    var activeThread = Channels.Values.FirstOrDefault(channel =>
+                        channel.Type is 10 or 11 or 12
+                        && !channel.Archived
+                        && string.Equals(channel.ParentId, ChannelId, StringComparison.Ordinal));
+                    if (activeThread != null) {
+                        targetChannelId = activeThread.Id;
+                    }
                 }
 
                 var message = new FakeDiscordMessage {
@@ -447,6 +463,7 @@ namespace DaleGhent.NINA.GroundStation.Tests.Discord {
                 content = message.Content,
                 webhook_id = message.WebhookId,
                 timestamp = message.CreatedAt.UtcDateTime.ToString("o"),
+                embeds = message.Embeds,
                 thread,
             };
         }

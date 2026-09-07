@@ -200,9 +200,9 @@ namespace DaleGhent.NINA.GroundStation.DiscordWebhook {
                 embed.AddField(Utilities.Utilities.ResolveTokens(embedTitle, this, metadata), Utilities.Utilities.ResolveTokens(embedText, this, metadata));
                 var embeds = new List<Embed>() { embed.Build() };
 
-                await discordWebhookCommon.SendDiscordWebhook(resolvedMessage, embeds, bypassSessionThread: bypassSessionThread);
+                await discordWebhookCommon.SendDiscordWebhook(resolvedMessage, embeds, bypassSessionThread: BypassSessionThread);
             } else {
-                await discordWebhookCommon.SendDiscordWebhook(resolvedMessage, bypassSessionThread: bypassSessionThread);
+                await discordWebhookCommon.SendDiscordWebhook(resolvedMessage, bypassSessionThread: BypassSessionThread);
             }
         }
 

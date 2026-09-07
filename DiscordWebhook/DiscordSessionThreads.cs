@@ -450,9 +450,12 @@ namespace DaleGhent.NINA.GroundStation.DiscordWebhook {
                 var threadId = message["thread"]?["id"]?.Value<string>()?.Trim();
                 var threadName = message["thread"]?["name"]?.Value<string>()?.Trim();
 
+                if (DiscordSeed.IsDirectChannelPost(messageWebhookId, webhookMetadata.WebhookId, messageContent)) {
+                    continue;
+                }
+
                 var hasSeedMarker = DiscordSeed.HasSeedMarker(messageContent);
-                var isWebhookOwned = !string.IsNullOrWhiteSpace(messageWebhookId)
-                    && string.Equals(messageWebhookId, webhookMetadata.WebhookId, StringComparison.Ordinal);
+                var isWebhookOwned = DiscordSeed.IsOwnedWebhook(messageWebhookId, webhookMetadata.WebhookId);
 
                 var seedText = DiscordSeed.NormalizeSeedText(messageContent);
 

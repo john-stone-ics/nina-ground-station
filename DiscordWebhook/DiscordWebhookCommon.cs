@@ -81,6 +81,7 @@ namespace DaleGhent.NINA.GroundStation.DiscordWebhook {
 
             if (bypassSessionThread || !useSessionThreads) {
                 await SendValidatedWebhookMessage(webhookUrl, message, embeds, attachmentStream, attachmentFileName, expectedChannelId: webhookMetadata.ChannelId);
+                Logger.Info($"Discord send route={route} posted directly to parent channel '{webhookMetadata.ChannelId}' bypassSessionThread={bypassSessionThread} useSessionThreads={useSessionThreads}");
                 return;
             }
 
@@ -164,15 +165,24 @@ namespace DaleGhent.NINA.GroundStation.DiscordWebhook {
                 attachmentBytes = buffer.ToArray();
             }
 
-            var payload = new {
-                content = message,
-                username = DiscordSettings.Current.WebhookDefaultBotName,
-                allowed_mentions = new {
+            var payload = new Dictionary<string, object> {
+                ["content"] = message,
+                ["username"] = DiscordSettings.Current.WebhookDefaultBotName,
+                ["allowed_mentions"] = new {
                     parse = allowedMentionTypes,
                 },
-                embeds = embeds?.Select(ToDiscordPayload).ToArray(),
-                thread_name = threadName,
             };
+
+            if (embeds != null) {
+                payload["embeds"] = embeds.Select(ToDiscordPayload).ToArray();
+            }
+
+            // thread_name must be omitted unless we are creating a forum/media post.
+            // Sending "thread_name": null on a text channel can attach the message to
+            // the active session thread instead of the parent channel.
+            if (!string.IsNullOrWhiteSpace(threadName)) {
+                payload["thread_name"] = threadName;
+            }
 
             return await discordClient.PostWebhook(webhookUrl, payload, waitForResponse, threadId, attachmentBytes, attachmentFileName, notifyOnFailure);
         }

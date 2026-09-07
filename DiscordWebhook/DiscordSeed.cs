@@ -23,6 +23,16 @@ namespace DaleGhent.NINA.GroundStation.DiscordWebhook {
                 && messageContent.StartsWith(SeedMarkerPrefix, StringComparison.Ordinal);
         }
 
+        public static bool IsOwnedWebhook(string messageWebhookId, string configuredWebhookId) {
+            return !string.IsNullOrWhiteSpace(messageWebhookId)
+                && !string.IsNullOrWhiteSpace(configuredWebhookId)
+                && string.Equals(messageWebhookId, configuredWebhookId, StringComparison.Ordinal);
+        }
+
+        public static bool IsDirectChannelPost(string messageWebhookId, string configuredWebhookId, string messageContent) {
+            return IsOwnedWebhook(messageWebhookId, configuredWebhookId) && !HasSeedMarker(messageContent);
+        }
+
         public static bool SeedTextMatchesThreadName(string seedText, string threadName) {
             var normalizedSeedText = NormalizeSeedText(seedText);
             if (string.IsNullOrWhiteSpace(normalizedSeedText) || string.IsNullOrWhiteSpace(threadName)) {

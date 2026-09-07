@@ -743,6 +743,30 @@
                                     Width="110"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Center">
+                                    <TextBlock.Text>Post to channel</TextBlock.Text>
+                                    <TextBlock.ToolTip>Send the test message to the webhook's parent channel instead of the session thread. Same as the Send to Discord instruction's "Post directly to channel" option.</TextBlock.ToolTip>
+                                </TextBlock>
+                                <CheckBox
+                                    Margin="5,0,0,0"
+                                    VerticalAlignment="Center"
+                                    IsChecked="{Binding DiscordTestPostToChannel, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+
+                            <ninactrl:AsyncProcessButton
+                                Width="515"
+                                Height="25"
+                                Margin="0,0,0,15"
+                                HorizontalAlignment="Left"
+                                ButtonForegroundBrush="{StaticResource ButtonForegroundBrush}"
+                                ButtonText="Send Test Message"
+                                Command="{Binding DiscordThreadRoutingTestCommand}"
+                                LoadingImageBrush="{StaticResource PrimaryBrush}" />
+
+                            <StackPanel Margin="0,0,0,10" Orientation="Horizontal">
+                                <TextBlock
+                                    Width="110"
+                                    HorizontalAlignment="Right"
+                                    VerticalAlignment="Center">
                                     <TextBlock.Text>Bot token</TextBlock.Text>
                                     <TextBlock.ToolTip>Required only when the webhook points to a normal text channel and Ground Station must create public threads for you.</TextBlock.ToolTip>
                                 </TextBlock>

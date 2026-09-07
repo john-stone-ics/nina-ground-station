@@ -35,9 +35,9 @@ namespace DaleGhent.NINA.GroundStation.DiscordWebhook {
         /// <summary>
         /// Deletes session threads that Ground Station created at least <paramref name="minimumAgeDays"/> days ago,
         /// along with the top-level starter messages that anchor them and every message inside them. Only messages
-        /// carrying Ground Station's invisible session-seed marker are eligible: messages posted directly to the
-        /// channel (for example end-of-session summaries sent with "Post directly to channel") are always kept, even
-        /// if a thread was later attached to them, as is anything a person or another integration posted.
+        /// carrying Ground Station's invisible session-seed marker are eligible: messages this plugin posted directly to
+        /// the parent channel (Send to Discord with "Post directly to channel", including end-of-night summaries) are
+        /// always kept, even if a thread was later attached to them, as is anything a person or another integration posted.
         /// The current session's thread is never deleted, even when it is old enough by the age cutoff.
         /// </summary>
         /// <returns>The number of session threads deleted.</returns>
@@ -133,11 +133,21 @@ namespace DaleGhent.NINA.GroundStation.DiscordWebhook {
                 if (createdAt.HasValue && createdAt.Value < cutoff) {
                     var threadId = message["thread"]?["id"]?.Value<string>()?.Trim();
                     var messageContent = message["content"]?.Value<string>()?.Trim();
+                    var messageWebhookId = message["webhook_id"]?.Value<string>()?.Trim();
 
-                    // Only session-thread seed messages carry Ground Station's invisible marker.
-                    // Requiring it guarantees that messages posted directly to the channel are
-                    // never deleted, even if someone manually started a thread from one of them.
-                    if (!string.IsNullOrWhiteSpace(threadId) && DiscordSeed.HasSeedMarker(messageContent)) {
+                    // Anything this webhook posted to the parent channel that is not a session-thread
+                    // seed stays put — including bypass/"Post directly to channel" traffic, even if a
+                    // thread was later attached to the message.
+                    if (DiscordSeed.IsDirectChannelPost(messageWebhookId, webhookMetadata.WebhookId, messageContent)) {
+                        Logger.Info($"Discord old-thread cleanup skipped Ground Station channel message '{messageId}'");
+                        continue;
+                    }
+
+                    // Only Ground Station session-thread seed messages are eligible. Requiring both the
+                    // invisible marker and our webhook id leaves human and other-bot posts alone.
+                    if (!string.IsNullOrWhiteSpace(threadId)
+                        && DiscordSeed.HasSeedMarker(messageContent)
+                        && DiscordSeed.IsOwnedWebhook(messageWebhookId, webhookMetadata.WebhookId)) {
                         var threadName = message["thread"]?["name"]?.Value<string>()?.Trim();
                         if (!string.IsNullOrWhiteSpace(currentThreadKey)
                             && string.Equals(threadName, currentThreadKey, StringComparison.Ordinal)) {

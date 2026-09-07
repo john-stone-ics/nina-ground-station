@@ -624,6 +624,14 @@ namespace DaleGhent.NINA.GroundStation.Config {
             }
         }
 
+        public bool DiscordTestPostToChannel {
+            get => pluginOptionsAccessor.GetValueBoolean(nameof(DiscordTestPostToChannel), false);
+            set {
+                pluginOptionsAccessor.SetValueBoolean(nameof(DiscordTestPostToChannel), value);
+                RaisePropertyChanged();
+            }
+        }
+
         public string DiscordThreadNameTemplate {
             get => pluginOptionsAccessor.GetValueString(nameof(DiscordThreadNameTemplate), "$$FORMAT_SESSIONDATETIME yyyy-MM-dd$$");
             set {
@@ -1181,17 +1189,31 @@ namespace DaleGhent.NINA.GroundStation.Config {
         }
 
         [RelayCommand]
-        private static async Task<bool> DiscordWebhookTest(object arg) {
+        private async Task<bool> DiscordWebhookTest(object arg) {
+            return await SendDiscordWebhookTest(bypassSessionThread: false);
+        }
+
+        [RelayCommand]
+        private async Task<bool> DiscordThreadRoutingTest(object arg) {
+            return await SendDiscordWebhookTest(bypassSessionThread: DiscordTestPostToChannel);
+        }
+
+        private static async Task<bool> SendDiscordWebhookTest(bool bypassSessionThread) {
             var embed = new EmbedBuilder() {
-                Title = "Test message title",
-                Description = "This is a test message description",
+                Title = bypassSessionThread ? "Channel test message" : "Test message title",
+                Description = bypassSessionThread
+                    ? "This test was posted directly to the parent channel, not the session thread."
+                    : "This is a test message description",
             }.Build();
 
             var embeds = new List<Embed>() { embed };
 
             try {
                 var send = new DiscordWebhook.DiscordWebhookCommon();
-                await send.SendDiscordWebhook("A test message:", embeds);
+                await send.SendDiscordWebhook(
+                    bypassSessionThread ? "A channel test message:" : "A test message:",
+                    embeds,
+                    bypassSessionThread: bypassSessionThread);
             } catch (DiscordWebhook.DiscordApiException) {
                 return false;
             } catch (Exception ex) {
@@ -1199,7 +1221,9 @@ namespace DaleGhent.NINA.GroundStation.Config {
                 return false;
             }
 
-            Notification.ShowSuccess("Discord webhook message sent");
+            Notification.ShowSuccess(bypassSessionThread
+                ? "Discord webhook message sent to the parent channel"
+                : "Discord webhook message sent");
             return true;
         }
 

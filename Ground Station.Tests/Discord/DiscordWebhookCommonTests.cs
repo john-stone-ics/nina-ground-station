@@ -1,5 +1,6 @@
 using DaleGhent.NINA.GroundStation.DiscordWebhook;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -31,11 +32,34 @@ namespace DaleGhent.NINA.GroundStation.Tests.Discord {
         public async Task SendDiscordWebhook_BypassPostsToParentChannel() {
             await context.Common.SendDiscordWebhook("hello", bypassSessionThread: true);
 
-            Assert.Contains(context.Api.Requests, request =>
+            var bypassPost = Assert.Single(context.Api.Requests, request =>
                 request.Method == System.Net.Http.HttpMethod.Post
                 && request.Url.StartsWith(FakeDiscordApi.WebhookUrl, StringComparison.Ordinal)
-                && !request.Url.Contains("thread_id=", StringComparison.Ordinal));
+                && !request.Url.Contains("/messages", StringComparison.Ordinal));
+            Assert.DoesNotContain("thread_id=", bypassPost.Url, StringComparison.Ordinal);
+            Assert.DoesNotContain("thread_name", bypassPost.Body, StringComparison.Ordinal);
+            Assert.Equal(FakeDiscordApi.ChannelId, Assert.Single(context.Api.Messages).ChannelId);
             Assert.DoesNotContain(context.Api.Requests, request => request.Url.Contains("/threads", StringComparison.Ordinal));
+        }
+
+        [Fact]
+        public async Task SendDiscordWebhook_BypassStaysOnParentAfterSessionThreadExists() {
+            await context.Common.SendDiscordWebhook("log line");
+            var thread = Assert.Single(context.Api.Channels.Values, channel => channel.Type == 11);
+
+            await context.Common.SendDiscordWebhook("Completely Finished", bypassSessionThread: true);
+
+            var announcement = Assert.Single(context.Api.Messages, message =>
+                string.Equals(message.Content, "Completely Finished", StringComparison.Ordinal));
+            Assert.Equal(FakeDiscordApi.ChannelId, announcement.ChannelId);
+            Assert.NotEqual(thread.Id, announcement.ChannelId);
+
+            var bypassPost = context.Api.Requests.Last(request =>
+                request.Method == System.Net.Http.HttpMethod.Post
+                && request.Url.StartsWith(FakeDiscordApi.WebhookUrl, StringComparison.Ordinal)
+                && request.Body.Contains("Completely Finished", StringComparison.Ordinal));
+            Assert.DoesNotContain("thread_id=", bypassPost.Url, StringComparison.Ordinal);
+            Assert.DoesNotContain("thread_name", bypassPost.Body, StringComparison.Ordinal);
         }
 
         [Fact]

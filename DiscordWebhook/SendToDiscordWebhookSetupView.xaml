@@ -139,7 +139,7 @@
                 <CheckBox
                     Grid.Column="1"
                     VerticalAlignment="Center"
-                    IsChecked="{Binding BypassSessionThread}" />
+                    IsChecked="{Binding BypassSessionThread, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             </Grid>
         </Border>
 

@@ -28,6 +28,20 @@ namespace DaleGhent.NINA.GroundStation.Tests.Discord {
         }
 
         [Fact]
+        public void IsDirectChannelPost_IsOwnedWebhookWithoutSeedMarker() {
+            const string webhookId = "webhook1";
+
+            Assert.True(DiscordSeed.IsDirectChannelPost(webhookId, webhookId, "09/06/2026 - 01:53:58  -  IMAGING:   Completely Finished NGC 7479"));
+            Assert.True(DiscordSeed.IsDirectChannelPost(webhookId, webhookId, "IMAGING: Start Processing"));
+            Assert.True(DiscordSeed.IsDirectChannelPost(webhookId, webhookId, null));
+            Assert.False(DiscordSeed.IsDirectChannelPost(webhookId, webhookId, DiscordSeed.BuildSeedText(ThreadName)));
+            Assert.False(DiscordSeed.IsDirectChannelPost("someone-else", webhookId, "IMAGING: Start Processing"));
+            Assert.False(DiscordSeed.IsDirectChannelPost(null, webhookId, "IMAGING: Start Processing"));
+            Assert.False(DiscordSeed.IsOwnedWebhook(webhookId, "other"));
+            Assert.True(DiscordSeed.IsOwnedWebhook(webhookId, webhookId));
+        }
+
+        [Fact]
         public void HasSeedMarker_RejectsHumanChannelPosts() {
             Assert.False(DiscordSeed.HasSeedMarker(null));
             Assert.False(DiscordSeed.HasSeedMarker(string.Empty));
