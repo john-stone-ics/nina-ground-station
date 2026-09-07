@@ -20,6 +20,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Text.RegularExpressions;
 
 namespace DaleGhent.NINA.GroundStation.Utilities {
@@ -70,6 +71,8 @@ namespace DaleGhent.NINA.GroundStation.Utilities {
 
             text = text.Replace(@"$$INSTRUCTION_SET$$",
                 string.IsNullOrEmpty(sequenceItem?.Parent?.Name) ? DoUrlEncode(urlEncode, "----") : DoUrlEncode(urlEncode, sequenceItem.Parent.Name));
+
+            text = ResolveTsTokens(text, sequenceItem, urlEncode);
 
             text = text.Replace(@"$$DATE$$", DoUrlEncode(urlEncode, datetime.ToString("d")));
             text = text.Replace(@"$$TIME$$", DoUrlEncode(urlEncode, datetime.ToString("T")));
@@ -320,6 +323,103 @@ namespace DaleGhent.NINA.GroundStation.Utilities {
             text = text.Replace(@"$$ERROR_LIST$$", DoUrlEncode(urlEncode, string.Join(", ", reasonList)));
 
             return text;
+        }
+
+        private static string ResolveTsTokens(string text, ISequenceEntity sequenceItem, bool urlEncode) {
+            if (string.IsNullOrEmpty(text) ||
+                (!text.Contains(@"$$TSPROJECTNAME$$", StringComparison.Ordinal) &&
+                 !text.Contains(@"$$TSTARGETNAME$$", StringComparison.Ordinal))) {
+                return text;
+            }
+
+            TryFindTsNames(sequenceItem, out var projectName, out var targetName);
+
+            text = string.IsNullOrEmpty(projectName)
+                ? text.Replace(@"$$TSPROJECTNAME$$", DoUrlEncode(urlEncode, "----"))
+                : text.Replace(@"$$TSPROJECTNAME$$", DoUrlEncode(urlEncode, projectName));
+
+            text = string.IsNullOrEmpty(targetName)
+                ? text.Replace(@"$$TSTARGETNAME$$", DoUrlEncode(urlEncode, "----"))
+                : text.Replace(@"$$TSTARGETNAME$$", DoUrlEncode(urlEncode, targetName));
+
+            return text;
+        }
+
+        internal static bool TryFindTsNames(ISequenceEntity sequenceItem, out string projectName, out string targetName) {
+            projectName = null;
+            targetName = null;
+
+            ISequenceContainer container = sequenceItem as ISequenceContainer ?? sequenceItem?.Parent;
+            while (container != null) {
+                if (TryReadTsNames(container, out var foundProject, out var foundTarget)) {
+                    projectName ??= foundProject;
+                    targetName ??= foundTarget;
+                    if (!string.IsNullOrEmpty(projectName) && !string.IsNullOrEmpty(targetName)) {
+                        return true;
+                    }
+                }
+
+                container = container.Parent;
+            }
+
+            return !string.IsNullOrEmpty(projectName) || !string.IsNullOrEmpty(targetName);
+        }
+
+        internal static bool TryReadTsNames(object source, out string projectName, out string targetName) {
+            projectName = null;
+            targetName = null;
+            if (source == null) {
+                return false;
+            }
+
+            try {
+                var planTarget = GetMember(GetMember(source, "plan"), "PlanTarget");
+                projectName = GetMember(GetMember(planTarget, "Project"), "Name") as string;
+                targetName = GetMember(planTarget, "Name") as string;
+
+                if (string.IsNullOrEmpty(projectName) || string.IsNullOrEmpty(targetName)) {
+                    TrySplitProjectTargetDisplay(GetMember(source, "ProjectTargetDisplay") as string, out var displayProject, out var displayTarget);
+                    projectName = string.IsNullOrEmpty(projectName) ? displayProject : projectName;
+                    targetName = string.IsNullOrEmpty(targetName) ? displayTarget : targetName;
+                }
+            } catch {
+                return false;
+            }
+
+            return !string.IsNullOrEmpty(projectName) || !string.IsNullOrEmpty(targetName);
+        }
+
+        internal static bool TrySplitProjectTargetDisplay(string display, out string projectName, out string targetName) {
+            projectName = null;
+            targetName = null;
+            if (string.IsNullOrEmpty(display)) {
+                return false;
+            }
+
+            const string separator = " / ";
+            var index = display.LastIndexOf(separator, StringComparison.Ordinal);
+            if (index <= 0 || index + separator.Length >= display.Length) {
+                return false;
+            }
+
+            projectName = display.Substring(0, index);
+            targetName = display.Substring(index + separator.Length);
+            return !string.IsNullOrEmpty(projectName) && !string.IsNullOrEmpty(targetName);
+        }
+
+        private static object GetMember(object source, string name) {
+            if (source == null || string.IsNullOrEmpty(name)) {
+                return null;
+            }
+
+            const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.IgnoreCase;
+            var type = source.GetType();
+            var property = type.GetProperty(name, flags);
+            if (property != null) {
+                return property.GetValue(source);
+            }
+
+            return type.GetField(name, flags)?.GetValue(source);
         }
 
         public static IDeepSkyObject FindDsoInfo(ISequenceContainer container) {
